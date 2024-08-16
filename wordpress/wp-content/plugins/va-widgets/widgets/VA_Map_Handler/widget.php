@@ -82,7 +82,10 @@ class VA_Map_Handler
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_scripts' ], 99 );
         add_action( "save_post_{$this->post_type}", [ $this, 'update_chached_data' ], 99, 0 );
         add_action( "edited_{$this->city_taxonomy}", [ $this, 'update_chached_data' ], 99, 0 );
-
+        //@see https://www.keycdn.com/support/wordpress-cache-enabler-plugin#hooks
+        // add_action( "cache_enabler_clear_site_cache", [ $this, 'update_chached_data' ], 99, 0 );
+        // add_action( "cache_enabler_clear_complete_cache", [ $this, 'registered_city_taxonomy_update_chached_data' ], 99, 0 );
+        add_action( "init", [ $this, 'cache_enabler_process_clear_cache_request_update_chached_data' ], 8, 0 );
     }
     /**
      * Class settings.
@@ -209,7 +212,7 @@ class VA_Map_Handler
 
     public function get_city_select()
     {
-        if ( $this->cities ) {
+        if ( $this->cities && $this->cities->terms ) {
             wp_enqueue_script( 'map-handler' );
             ob_start();
             include __DIR__ . '/inc/city_select.php';
@@ -230,6 +233,48 @@ class VA_Map_Handler
 
         return file_put_contents( $this::JSON_DATA_PATH, json_encode( $data ) );
 
+    }
+
+    public function cache_enabler_process_clear_cache_request_update_chached_data()
+    {
+        if ( empty( $_GET[ '_cache' ] ) || empty( $_GET[ '_action' ] ) || $_GET[ '_cache' ] !== 'cache-enabler' || ( $_GET[ '_action' ] !== 'clear' && $_GET[ '_action' ] !== 'clearurl' ) ) {
+            return;
+        }
+
+        if ( empty( $_GET[ '_wpnonce' ] ) || !wp_verify_nonce( $_GET[ '_wpnonce' ], 'cache_enabler_clear_cache_nonce' ) ) {
+            return;
+        }
+
+        $temp_taxonomy = false;
+        if ( !taxonomy_exists( $this->city_taxonomy ) ) {
+            register_taxonomy( $this->city_taxonomy, $this->post_type );
+            $temp_taxonomy = true;
+        }
+
+        // throw new ErrorException( "Hook has must fired after nonce" );
+
+        $this->update_chached_data();
+
+        if ( $temp_taxonomy ) unregister_taxonomy( $this->city_taxonomy );
+    }
+
+    /**
+     * If $this->city_taxonomy is not registered, postpone excution of
+     * update_chached_data() to the moment of taxonomy registration.
+     *
+     * @return int
+     */
+    public function registered_city_taxonomy_update_chached_data(): int | bool
+    {
+        // throw new ErrorException( "Taxnomy {$this->city_taxonomy} exists: " . ( taxonomy_exists( $this->city_taxonomy ) ? 'True' : 'False' ) );
+        // $this->update_chached_data();
+        if ( !taxonomy_exists( $this->city_taxonomy ) ) {
+            // add_action( "registered_taxonomy_{$this->city_taxonomy}", [ $this, 'update_chached_data' ], 99, 0 );
+            add_action( "registered_taxonomy_{$this->city_taxonomy}", [ $this, 'update_chached_data' ], 99, 0 );
+            return true;
+        } else {
+            return $this->update_chached_data();
+        }
     }
 
     /**
@@ -292,9 +337,9 @@ class VA_Map_Handler
 
             // Adding data from CPT Meta.
             // Will be replaced in HTML by JS.
-            $meta = get_post_meta( $branch->ID );
+            $meta = apply_filters( 'va_map_handler_get_post_meta', get_post_meta( $branch->ID ), $branch->ID );
 
-            $meta = $this->unpack_post_meta( $meta, $this->options[ 'fields' ] );
+            $meta = $this->unpack_meta( $meta, $this->options[ 'fields' ] );
             // print_r( $meta );
             $branch_info = $this::redefine_associations( $meta, $meta_associations );
 
@@ -354,7 +399,7 @@ class VA_Map_Handler
                 $meta = get_term_meta( $term->term_id );
                 // Extract sub values $meta[key] = $meta[key][0]
                 $meta = array_map( function ( $m ) {return is_array( $m ) ? ( $m[ 0 ] ?? '' ) : $m;}, $meta );
-                $meta = $this->unpack_post_meta( $meta, $this->city_options );
+                $meta = $this->unpack_meta( $meta, $this->city_options );
                 $data[ 'cities' ][ $term->term_id ] = array_merge(
                     $this::redefine_associations( $term, $term_associations ),
                     $this::redefine_associations( $meta, $term_meta_associations )
@@ -408,7 +453,7 @@ class VA_Map_Handler
      * @param  array|object Metafields
      * @return array        Metafields
      */
-    private function unpack_post_meta( array $object, array $fields )
+    private function unpack_meta( array $object, array $fields )
     {
         $result = array();
 
@@ -418,6 +463,7 @@ class VA_Map_Handler
                 $type = $fields[ $key ][ 'type' ];
                 if ( is_array( $meta ) ) {
                     foreach ( $meta as $mkey => $value ) {
+                        if ( empty( $value ) ) unset( $meta[ $mkey ] );
                         $meta[ $mkey ] = $this->unpack_meta_value( $value, $type );
                     }
                 } else {
@@ -425,6 +471,7 @@ class VA_Map_Handler
                 }
             }
             $result[ $key ] = $meta;
+
         }
 
         return $result;

@@ -43,6 +43,8 @@ class VA_Widgets
                 : '[ERR] No such map handler registered for this City Selector';
             } );
         } );
+
+        do_action( 'va_widgets_after_init' );
     }
 
 }

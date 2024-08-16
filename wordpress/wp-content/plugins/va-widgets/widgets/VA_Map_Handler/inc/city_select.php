@@ -24,6 +24,13 @@
         user-select: none;
         font-weight: bold;
         color: #007FFF;
+        
+
+        -webkit-justify-content: center; 
+        -webkit-align-items: center;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: nowrap;
     }
 
     .select-button .icon-arrow-top {
