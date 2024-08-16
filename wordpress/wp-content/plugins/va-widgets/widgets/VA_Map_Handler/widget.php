@@ -105,6 +105,35 @@ class VA_Map_Handler
      *
      * Example 1.
      *     'post_type' => (string) Post type, where map points stored. Required.
+     *     'yandex-api-key' => (string) Yandex Map API key. Required.
+     *     'point-options' => array(   
+     *         // @see https://yandex.ru/dev/jsapi-v2-1/doc/ru/v2-1/ref/reference/GeoObject
+     *         // @see https://ru.stackoverflow.com/questions/443643/Свой-маркер-картинка-Яндекс-Карты
+     *         'iconLayout'      => 'default#image',
+     *         'iconImageHref'   => plugin_dir_url( __FILE__ ) . 'widgets/VA_Map_Handler/img/map-label-red.png',
+     *         // 'iconImageSize'   => [ 50, 62 ],
+     *         'iconImageOffset' => [ 0, 0 ],
+     *     ),
+     *     'styles'        => array(    Custom #map block styles in "style" attribute.
+     *         'height' => '500px',  (string) => (string)
+     *         'width'  => '100%',
+     *     ),
+     *     'city'          => array(    Optional. Need to city list to work.
+     *         'taxonomy' => 'branch_city', (string) Taxonomy name of cities. Required.
+     *         'fields'   => array(     Required. City fields. Get from Taxonomy Metafields by 'name'
+     *             // array: meta_name => args
+     *             'city_coordinates'    => array(  Required. City coordinates.
+     *                 'name' => 'coordinates', (string) Metafield name. 
+     *                 'type' => 'coordinates', (string) Backend processing type. @see unpack_meta_value(...) 
+     *             ),
+     *             'city_default_branch' => array(  Required. Default branch, what will be selected by defaul
+     *                 'name' => 'render_id',
+     *             ),
+     *             'city_zoom'           => array(
+     *                 'name' => 'zoom',
+     *             ),
+     *         ),
+     *     ),
      *     'rendering' => array(    Required. Parameters of rendering.
      *         'type'   => (string) Can be 'client' or 'server'. Define, where data will be rendered. Required.
      *         'fields' => array(   Rendering Fields.
@@ -113,15 +142,18 @@ class VA_Map_Handler
      *                 'selector' => (string) Selector, where content will be put.
      *                 'template' => (string) HTML template. Use '{{@}}' as placeholder for value.
      *             ),
-     *            ($prefix:)$fieldName => array(<...>)
+     *        ---- START !! TODO !!---- !! Not implemented yet !! ----
+     *            ($prefix:)$fieldName => array(<...>) !! TODO !!
      *               $prefix:
-     *                - "wp" - wordprees value
+     *                - "wp" - WordPress value
      *                - "" (default) - meta value
      *         <...>
+     *        ---- END !! TODO !!---- !! Not implemented yet !! ----
      *         ),
      *     ),
      * );
-     *
+     * 
+     *  ---- START !! TODO !!---- !! Not implemented yet !! ----
      * Exapmle 2.
      * $args = array(
      *     'post_type' => 'branch', // required!
@@ -132,6 +164,7 @@ class VA_Map_Handler
      *         'selector' => '#branch',
      *     ),
      * );
+     * ---- END !! TODO !!---- !! Not implemented yet !! ----
      *
      *
      * @param array $args
